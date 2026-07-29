@@ -1,0 +1,41 @@
+name: Formal Verification
+
+on:
+  push:
+    paths:
+      - 'src/formal/**'
+      - 'src/maref/governance/**'
+      - 'src/maref/integration/test_platform/**'
+      - 'src/maref/security/steg_sanitizer.py'
+  pull_request:
+    paths:
+      - 'src/formal/**'
+      - 'src/maref/governance/**'
+      - 'src/maref/integration/test_platform/**'
+      - 'src/maref/security/steg_sanitizer.py'
+  workflow_dispatch:
+
+jobs:
+  tla-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - name: Setup TLA+
+        run: |
+          wget -q https://github.com/tlaplus/tlaplus/releases/download/v1.4.5/tla2tools.jar -O /tmp/tla2tools.jar
+      - name: Verify Gray Code FSM
+        run: |
+          java -cp /tmp/tla2tools.jar tlc2.TLC src/formal/MarefLite.tla -config src/formal/MarefLiteMC.cfg
+      - name: Verify Consensus
+        run: |
+          java -cp /tmp/tla2tools.jar tlc2.TLC src/formal/MAREF_Consensus.tla -config src/formal/MAREF_ConsensusMC.cfg
+      - name: Verify Constitutional Red Lines (RL-001 ~ RL-005)
+        run: |
+          java -cp /tmp/tla2tools.jar tlc2.TLC -config src/formal/MAREF_ConstitutionalRedLinesMC.cfg src/formal/MAREF_ConstitutionalRedLines.tla
+      - name: Verify Test Integration Theorems (含 StenoDetectionComplete)
+        run: |
+          java -cp /tmp/tla2tools.jar tlc2.TLC src/formal/MAREF_TestIntegration.tla -config src/formal/MAREF_TestIntegrationMC.cfg
